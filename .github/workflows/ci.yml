@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Caller permissions set the CEILING for the reusable workflow.
+# Reusable workflows cannot grant themselves more than the caller has.
+permissions:
+  contents: read
+  id-token: write          # Required for AWS OIDC and cosign keyless signing
+  packages: write          # Required for pushing to GHCR (if used)
+  security-events: write   # Required for SARIF upload to GitHub Security tab
+  pull-requests: write     # Required for PR comments (Trivy, Checkov)
+
+jobs:
+  pipeline:
+    name: DevSecOps Pipeline
+    uses: Secops/platform-ci/.github/workflows/full-pipeline.yml@main
+    with:
+      image_name: wattzgoat
+      gitops_repo: Secops/platform-gitops
+      gitops_app_name: wattzgoat
+      environment: dev
+      registry: 042186225507.dkr.ecr.eu-west-2.amazonaws.com
+      helm_chart_path: deploy/helm
+      helm_namespace: wattzgoat-dev
+      languages: '["javascript-typescript"]'
+      fail_on_finding: true
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+      GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+      SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
