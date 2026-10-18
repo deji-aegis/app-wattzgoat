@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Recharge — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+{{ ui.page_header('Recharge balance', None, 'Prepaid energy') }}
+<p class="-mt-5 mb-6 max-w-2xl text-sm text-gray-600">
+  Your balance is prepaid energy, measured in kWh. Energy is sold at
+  <strong>${{ "%.2f"|format(rate) }} per kWh</strong> &mdash; you pay in dollars and the equivalent kWh are added to your balance.
+</p>
+
+{% if error %}
+<div class="mb-6">{% call ui.alert('error') %}{{ error }}{% endcall %}</div>
+{% endif %}
+
+{% if credited is defined %}
+<div class="mb-6 rounded-xl bg-green-50 p-4 text-sm text-green-800 ring-1 ring-green-200">
+  You paid {{ "-" if paid < 0 else "" }}${{ "%.2f"|format(paid|abs) }} &rarr; {{ "{:,.2f}".format(credited) }} kWh added at ${{ "%.2f"|format(rate) }}/kWh.
+  New balance: {{ "{:,.2f}".format(meter['balance']) }} kWh
+  {% if buslogic_flag %}
+  <br><span class="text-xs">units_credited was trusted directly instead of being recomputed from amount_paid — Business logic flaws: {{ buslogic_flag }}</span>
+  {% endif %}
+  {% if negative_flag %}
+  <br><span class="text-xs">A negative amount was accepted and applied to the balance — Business logic flaws: {{ negative_flag }}</span>
+  {% endif %}
+  {% if clickjack_flag %}
+  <br><span class="text-xs">This recharge credited a different meter than yours, delivered through a framed request — Missing security headers: {{ clickjack_flag }}</span>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="max-w-sm rounded-2xl bg-white p-6 shadow-card ring-1 ring-black/5">
+  {% if meter %}
+  <p class="mb-4 text-sm text-gray-500">{{ meter['nickname'] }} · current balance {{ "{:,.2f}".format(meter['balance']) }} kWh</p>
+  <form method="post" class="space-y-4">
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Amount to pay ($)</label>
+      <input name="amount_paid" type="text" step="0.01" min="0" required class="{{ ui.input_class() }}">
+      <p id="recharge-preview" class="mt-1 h-4 text-xs text-gray-500"></p>
+    </div>
+    <button id="confirm-recharge" class="{{ ui.btn_class('accent', full=True) }}">Confirm recharge</button>
+  </form>
+  <input type="hidden" name="units_credited">
+  <script>
+  (function () {
+    var rate = {{ rate }};
+    var input = document.querySelector('input[name=amount_paid]');
+    var preview = document.getElementById('recharge-preview');
+    input.addEventListener('input', function () {
+      var v = parseFloat(input.value);
+      preview.textContent = isFinite(v) ? 'You will receive ' + (v / rate).toFixed(2) + ' kWh' : '';
+    });
+  })();
+  </script>
+  {% else %}
+  <p class="text-gray-500">No meter on this account.</p>
+  {% endif %}
+</div>
+{% endblock %}

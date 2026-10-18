@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Solar export — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+{{ ui.page_header('Report solar export', None, 'Solar') }}
+<p class="-mt-5 mb-6 max-w-2xl text-sm text-gray-600">
+  Tell us how much you fed back into the grid this period. Exports earn a
+  ${{ "%.2f"|format(export_rate) }}/kWh credit, which is added to your balance as energy at the
+  ${{ "%.2f"|format(rate) }}/kWh prepaid rate.
+</p>
+
+{% if error %}
+<div class="mb-6">{% call ui.alert('error') %}{{ error }}{% endcall %}</div>
+{% endif %}
+
+{% if credited is defined %}
+<div class="mb-6 rounded-xl bg-green-50 p-4 text-sm text-green-800 ring-1 ring-green-200">
+  {{ "{:,.1f}".format(exported) }} kWh exported &rarr; {{ "-" if credit < 0 else "" }}${{ "{:,.2f}".format(credit|abs) }} credit &rarr; {{ "{:,.2f}".format(credited) }} kWh added.
+  New balance: {{ "{:,.2f}".format(meter['balance']) }} kWh
+  {% if buslogic_flag %}
+  <br><span class="text-xs">No plausibility check on claimed export — Business logic flaws: {{ buslogic_flag }}</span>
+  {% endif %}
+  {% if negative_flag %}
+  <br><span class="text-xs">A negative export was accepted and applied to the balance — Business logic flaws: {{ negative_flag }}</span>
+  {% endif %}
+</div>
+{% endif %}
+
+<div class="max-w-sm rounded-2xl bg-white p-6 shadow-card ring-1 ring-black/5">
+  {% if meter %}
+  <form method="post" class="space-y-4">
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Exported (kWh)</label>
+      <input name="exported_kwh" type="number" step="0.1" min="0" required class="{{ ui.input_class() }}">
+    </div>
+    <button class="{{ ui.btn_class('accent', full=True) }}">Submit</button>
+  </form>
+  {% else %}
+  <p class="text-gray-500">No meter on this account.</p>
+  {% endif %}
+</div>
+{% endblock %}

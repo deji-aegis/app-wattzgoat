@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Create account — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+{% call ui.auth_card('Create your account', 'Set up access to your meter dashboard.', 'user') %}
+  {% if weak_password_flag %}
+  <div class="mb-4">{% call ui.alert('success') %}
+    Account created with a password under 4 characters, no complexity check stopped it --
+    Weak passwords: {{ weak_password_flag }}
+  {% endcall %}</div>
+  {% endif %}
+  {% if error %}
+  <div class="mb-4">{% call ui.alert('error') %}{{ error }}{% endcall %}</div>
+  {% endif %}
+  <form method="post" class="space-y-4">
+    {{ ui.field('name', 'name', 'Full name', icon_name='user') }}
+    {{ ui.field('email', 'email', 'Email', icon_name='mail') }}
+    {{ ui.field('password', 'password', 'Password', type='password', icon_name='lock') }}
+    {{ ui.field('confirm_password', 'confirm_password', 'Confirm password', type='password', icon_name='lock') }}
+    <button class="{{ ui.btn_class('primary', full=True) }}">Create account</button>
+  </form>
+  <p class="mt-6 border-t border-gray-100 pt-4 text-sm text-gray-500">
+    Already have an account? <a href="{{ url_for('auth.login') }}" class="font-medium text-ink underline">Log in</a>
+  </p>
+{% endcall %}
+{% endblock %}

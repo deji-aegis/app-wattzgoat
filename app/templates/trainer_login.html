@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instructor login — WattzGOAT</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+</head>
+{% import "_ui.html" as ui %}
+<body class="bg-canvas text-ink min-h-screen flex items-center justify-center p-4 font-sans antialiased">
+<div class="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lift ring-1 ring-black/5">
+  <div class="mb-1 flex items-center gap-2">
+    <svg width="24" height="24" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M60 4 L20 56 L42 56 L34 96 L80 40 L52 40 Z" fill="#F4B41A"/>
+    </svg>
+    <span class="font-semibold text-lg">Wattz<span class="text-[#F4B41A] font-bold">GOAT</span></span>
+  </div>
+  <h1 class="mb-6 text-xs font-semibold uppercase tracking-widest text-accent-700">Instructor dashboard</h1>
+
+  {% if error %}
+  <div class="mb-4">{% call ui.alert('error') %}{{ error }}{% endcall %}</div>
+  {% endif %}
+
+  <form method="post" class="space-y-4">
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700" for="email">Email</label>
+      <input type="email" id="email" name="email" required autofocus class="{{ ui.input_class() }}">
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700" for="password">Password</label>
+      <input type="password" id="password" name="password" required class="{{ ui.input_class() }}">
+    </div>
+    <button type="submit" class="{{ ui.btn_class('primary', full=True) }}">
+      Log in
+    </button>
+  </form>
+
+  <p class="mt-6 border-t border-gray-100 pt-4 text-xs text-gray-400">
+    This is a separate, dedicated instructor login — not the participant app's account system.
+  </p>
+</div>
+</body>
+</html>

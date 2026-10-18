@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Account — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+{{ ui.page_header('Account settings', 'Your details and password.', 'Account') }}
+
+<div class="mb-6 max-w-md rounded-2xl bg-white p-6 shadow-card ring-1 ring-black/5">
+  <h2 class="mb-4 text-lg font-semibold tracking-tight">Your details</h2>
+  <div id="status" class="text-sm mb-4 hidden"></div>
+  <form id="account-form" class="space-y-4">
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Full name</label>
+      <input name="name" value="{{ user['name'] }}" class="{{ ui.input_class() }}">
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Email</label>
+      <input value="{{ user['email'] }}" disabled class="{{ ui.input_class() }} bg-gray-50 text-gray-500">
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Phone</label>
+      <input name="phone" value="{{ user['phone'] or '' }}" placeholder="(555) 555-0100" class="{{ ui.input_class() }}">
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Service address</label>
+      <input name="address_service" value="{{ user['address_service'] or '' }}" class="{{ ui.input_class() }}">
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Billing address</label>
+      <input name="address_billing" value="{{ user['address_billing'] or '' }}" class="{{ ui.input_class() }}">
+    </div>
+    <input type="hidden" name="billing_rate" value="{{ user['billing_rate'] }}">
+    <input type="hidden" name="role" value="{{ user['role'] }}">
+    <input type="hidden" name="account_email" value="{{ user['email'] }}">
+    <button class="{{ ui.btn_class('primary', full=True) }}">Save changes</button>
+  </form>
+</div>
+
+<div class="max-w-md rounded-2xl bg-white p-6 shadow-card ring-1 ring-black/5">
+  <h2 class="mb-4 text-lg font-semibold tracking-tight">Change password</h2>
+  {% if error %}
+  <div class="mb-4">{% call ui.alert('error') %}{{ error }}{% endcall %}</div>
+  {% endif %}
+  {% if password_changed %}
+  <p class="text-green-700 text-sm mb-3">Password updated.</p>
+  {% if weakpw_flag %}
+  <p class="text-sm text-gray-600 mb-3">Weak passwords: {{ weakpw_flag }}</p>
+  {% endif %}
+  {% if pwchange_flag %}
+  <p class="text-sm text-gray-600 mb-3">Broken authentication: {{ pwchange_flag }}</p>
+  {% endif %}
+  {% if csrf_flag %}
+  <p class="text-sm text-gray-600 mb-3">CSRF: {{ csrf_flag }}</p>
+  {% endif %}
+  {% endif %}
+  <form method="post" action="{{ url_for('customer.change_password') }}" class="space-y-4">
+    {% if is_hardened('CSRF_TEACH') %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    {% endif %}
+    {% if is_hardened('PWCHANGE_TEACH') %}
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Current password</label>
+      <input name="current_password" type="password" required class="{{ ui.input_class() }}">
+    </div>
+    {% endif %}
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">New password</label>
+      <input name="new_password" type="password" required class="{{ ui.input_class() }}">
+    </div>
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700">Confirm new password</label>
+      <input name="confirm_new_password" type="password" required class="{{ ui.input_class() }}">
+    </div>
+    <button class="{{ ui.btn_class('primary', full=True) }}">Update password</button>
+  </form>
+</div>
+
+<script>
+document.getElementById('account-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = new FormData(e.target);
+  const payload = Object.fromEntries(form.entries());
+  const res = await fetch('/api/account', {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const status = document.getElementById('status');
+  status.classList.remove('hidden');
+  status.textContent = res.ok ? 'Saved.' : 'Something went wrong.';
+  status.className = res.ok ? 'text-sm mb-4 text-green-700' : 'text-sm mb-4 text-red-600';
+});
+</script>
+{% endblock %}

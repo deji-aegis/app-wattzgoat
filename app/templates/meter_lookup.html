@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Meter Lookup — WattzGOAT Field Tools{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+<div class="mx-auto mt-4 max-w-md rounded-2xl bg-white p-6 shadow-card ring-1 ring-black/5">
+  <span class="mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-accent/20 text-ink">{{ ui.icon('gauge', 22) }}</span>
+  <h1 class="mb-1 text-xl font-semibold tracking-tight">Field meter lookup</h1>
+  <p class="mb-6 text-sm text-gray-500">For technicians on-site. No login required — enter a meter code to confirm installation details.</p>
+  <form id="lookup-form" class="mb-4 flex gap-2">
+    <input id="code" name="code" placeholder="e.g. MTR-1002" class="{{ ui.input_class() }} flex-1">
+    <button class="{{ ui.btn_class('primary') }}">Look up</button>
+  </form>
+  <div id="result" class="text-sm hidden bg-gray-50 rounded-xl p-4"></div>
+  <div id="error" class="text-sm text-red-600 hidden"></div>
+</div>
+<script>
+document.getElementById('lookup-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const code = document.getElementById('code').value.trim();
+  const result = document.getElementById('result');
+  const error = document.getElementById('error');
+  result.classList.add('hidden');
+  error.classList.add('hidden');
+  const res = await fetch('/api/field/meter-lookup?code=' + encodeURIComponent(code));
+  const data = await res.json();
+  if (!res.ok) {
+    error.textContent = data.error || 'Lookup failed.';
+    error.classList.remove('hidden');
+    return;
+  }
+  result.innerHTML =
+    '<div><span class="text-gray-500">Meter code:</span> ' + data.meter_code + '</div>' +
+    '<div><span class="text-gray-500">Status:</span> ' + data.status + '</div>' +
+    '<div><span class="text-gray-500">Install address:</span> ' + (data.install_address || '—') + '</div>';
+  result.classList.remove('hidden');
+});
+</script>
+{% endblock %}

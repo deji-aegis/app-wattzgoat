@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}WattzGOAT{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+{% block head_extra %}{% endblock %}
+</head>
+{% import "_ui.html" as ui %}
+{% set guided = guided_state() %}
+{% set gp = guided_panel() %}
+{% macro guided_switch() -%}
+{% if guided.available %}
+<button type="button" id="wg-guided-toggle" role="switch" aria-checked="{{ 'true' if guided.on else 'false' }}" title="Hints for the page you are on" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs text-gray-200 transition hover:bg-white/20 hover:text-white">
+  <span>Guided mode</span>
+  <span class="relative inline-block h-4 w-7 rounded-full transition-colors {% if guided.on %}bg-accent{% else %}bg-gray-500{% endif %}"><span class="absolute left-0.5 top-0.5 h-3 w-3 rounded-full bg-white transition-transform {% if guided.on %}translate-x-3{% endif %}"></span></span>
+</button>
+{% endif %}
+{%- endmacro %}
+{% macro nav_link(endpoint, label) -%}
+<a href="{{ url_for(endpoint) }}" class="rounded-md px-3 py-1.5 transition {% if request.endpoint == endpoint %}bg-white/10 text-white{% else %}hover:bg-white/10 hover:text-white{% endif %}">{{ label }}</a>
+{%- endmacro %}
+<body class="bg-canvas text-ink min-h-screen font-sans antialiased{% if gp %} pb-28{% endif %}">
+<header class="sticky top-0 z-30 bg-ink/95 text-white px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2 shadow-lift backdrop-blur">
+<a href="{{ url_for(('admin.dashboard' if g.user['role'] == 'admin' else 'customer.dashboard') if g.user else 'auth.login') }}" class="flex items-center gap-3 hover:opacity-90">
+  <svg width="28" height="28" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M60 4 L20 56 L42 56 L34 96 L80 40 L52 40 Z" fill="#F4B41A"/>
+  </svg>
+  <span class="font-semibold text-lg">Wattz<span class="text-[#F4B41A] font-bold">GOAT</span></span>
+</a>
+  {% if g.user %}
+  <nav class="ml-4 flex flex-wrap gap-1 text-sm text-gray-300">
+    {% if g.user['role'] == 'customer' %}
+    {{ nav_link('customer.dashboard', 'Dashboard') }}
+    {{ nav_link('customer.usage', 'Usage') }}
+    {{ nav_link('customer.recharge', 'Recharge') }}
+    {{ nav_link('customer.solar', 'Solar') }}
+    {{ nav_link('customer.bills', 'Bills') }}
+    {{ nav_link('customer.support', 'Support') }}
+    {{ nav_link('pages.contact', 'Contact') }}
+    {{ nav_link('progress.progress', 'Progress') }}
+    {% else %}
+    {{ nav_link('admin.dashboard', 'Overview') }}
+    {{ nav_link('admin.meters', 'Meters') }}
+    {{ nav_link('admin.alarms', 'Alarms') }}
+    {{ nav_link('admin.tickets', 'Tickets') }}
+    {{ nav_link('admin.users', 'Users') }}
+    {{ nav_link('progress.progress', 'Progress') }}
+    {{ nav_link('leaderboard.leaderboard_page', 'Solar Leaderboard') }}
+    {% endif %}
+  </nav>
+  <div class="ml-auto flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-400">
+    <span>{{ today_utc() }} (UTC)</span>
+    {{ guided_switch() }}
+    <span title="Your participant nickname — click to change">
+      <button type="button" id="wg-identity-chip" class="rounded-full bg-white/10 px-3 py-1 text-gray-200 transition hover:bg-white/20 hover:text-white">{{ participant_display() }}</button>
+    </span>
+    <a href="{{ url_for('customer.account') }}" title="Your account" class="inline-flex items-center gap-1.5 rounded-md px-2 py-1 transition {% if request.endpoint == 'customer.account' %}bg-white/10 text-white{% else %}text-gray-300 hover:bg-white/10 hover:text-white{% endif %}">{{ ui.icon('user', 15) }}{{ g.user['name'] }}</a>
+    <form method="post" action="{{ url_for('auth.logout') }}">
+      <button class="rounded-md px-2 py-1 text-gray-300 transition hover:bg-white/10 hover:text-white">Log out</button>
+    </form>
+  </div>
+  {% else %}
+  <nav class="ml-auto flex flex-wrap items-center gap-1 text-sm text-gray-300">
+    {{ nav_link('leaderboard.leaderboard_page', 'Solar Leaderboard') }}
+    {{ nav_link('pages.contact', 'Contact') }}
+    {{ guided_switch() }}
+    <button type="button" id="wg-identity-chip" class="ml-2 rounded-full bg-white/10 px-3 py-1 text-gray-200 transition hover:bg-white/20 hover:text-white" title="Your participant nickname — click to change">{{ participant_display() }}</button>
+  </nav>
+  {% endif %}
+</header>
+<div class="mx-auto px-6 py-10 {% if page_wide %}max-w-6xl{% else %}max-w-4xl{% endif %}">
+  <main class="min-w-0">
+{% block content %}{% endblock %}
+  </main>
+</div>
+<footer class="mx-auto px-6 py-6 text-xs text-gray-500 border-t border-gray-200 mt-8 {% if page_wide %}max-w-6xl{% else %}max-w-4xl{% endif %}">
+  <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+    <span>&copy; {{ current_year() }} WattzGOAT Corp™. All rights reserved.</span>
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ url_for('pages.terms') }}" class="underline hover:text-gray-700">Terms of Service</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ url_for('pages.privacy') }}" class="underline hover:text-gray-700">Privacy Policy</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="{{ url_for('pages.contact') }}" class="underline hover:text-gray-700">Contact us</a>
+    {% if g.user %}
+    <span class="sm:ml-auto">{% if g.user['previous_login_at'] %}Last logged in: {{ g.user['previous_login_at'][:16] }} UTC{% else %}First login{% endif %}</span>
+    {% endif %}
+  </div>
+</footer>
+
+{% if gp %}{% include "_guided_panel.html" %}{% endif %}
+
+<div id="wg-disclaimer" class="fixed inset-0 bg-black/70 z-50 hidden items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-lift ring-1 ring-red-200">
+    <h2 class="text-lg font-bold text-red-700 mb-3">⚠ Intentionally Vulnerable Application</h2>
+    <p class="text-sm text-gray-700 mb-3">
+      WattzGOAT is deliberately insecure, built for hands-on security training.
+    </p>
+    <ul class="text-sm text-gray-700 list-disc pl-5 mb-4 space-y-1">
+      <li>Never deploy this on a public-facing network or the open internet.</li>
+      <li>Never enter real personal, financial, or credential information.</li>
+      <li>Use only in an isolated lab environment.</li>
+    </ul>
+    <button id="wg-disclaimer-ack" class="w-full rounded-lg bg-ink text-white py-2.5 font-semibold transition hover:bg-ink-700">
+      I Understand — Enter Lab
+    </button>
+  </div>
+</div>
+
+<div id="wg-cookie-banner" class="fixed bottom-0 inset-x-0 bg-ink text-gray-200 text-sm px-4 py-3 hidden z-40 shadow-lift">
+  <div class="max-w-4xl mx-auto flex flex-wrap items-center gap-3">
+    <p class="flex-1">
+      WattzGOAT uses cookies, some of which are load-bearing.
+      <a href="{{ url_for('pages.privacy') }}" class="underline">Learn more</a>.
+    </p>
+    <button id="wg-cookie-ack" class="bg-accent text-ink rounded-lg px-4 py-1.5 font-semibold text-xs transition hover:brightness-95">
+      Accept
+    </button>
+  </div>
+</div>
+
+<div id="wg-nickname-modal" class="fixed inset-0 bg-black/50 z-50 hidden items-center justify-center p-4">
+  <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-lift">
+    <h2 class="text-lg font-semibold mb-2">Pick a nickname</h2>
+    <p class="text-sm text-gray-600 mb-4">
+      Shown next to your participant ID on the instructor's leaderboard. Optional --
+      skip if you'd rather stay anonymous.
+    </p>
+    <input type="text" id="wg-nickname-input" maxlength="24" placeholder="e.g. CircuitBreaker"
+           class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm mb-2 transition focus:border-ink focus:outline-none focus:ring-2 focus:ring-accent/60">
+    <p id="wg-nickname-error" class="text-xs text-red-600 mb-2 hidden"></p>
+    <div class="flex gap-2">
+      <button id="wg-nickname-save" class="flex-1 rounded-lg bg-ink text-white py-2.5 text-sm font-semibold transition hover:bg-ink-700">Save</button>
+      <button id="wg-nickname-skip" class="flex-1 rounded-lg bg-gray-100 text-gray-700 py-2.5 text-sm font-semibold transition hover:bg-gray-200">Skip for now</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var modal = document.getElementById('wg-nickname-modal');
+  var input = document.getElementById('wg-nickname-input');
+  var error = document.getElementById('wg-nickname-error');
+  var chips = document.querySelectorAll('#wg-identity-chip');
+
+  function openModal() {
+    error.classList.add('hidden');
+    input.value = '';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    input.focus();
+  }
+  function closeModal() {
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+    if (window.__wgMaybeShowCookieBanner) {
+      window.__wgMaybeShowCookieBanner();
+    }
+  }
+
+  chips.forEach(function (chip) {
+    chip.addEventListener('click', openModal);
+  });
+
+  document.getElementById('wg-nickname-skip').addEventListener('click', function () {
+    try { localStorage.setItem('wg_nickname_prompted', '1'); } catch (e) {}
+    closeModal();
+  });
+
+  document.getElementById('wg-nickname-save').addEventListener('click', function () {
+    var nickname = input.value.trim();
+    if (!nickname) { closeModal(); return; }
+    fetch("{{ url_for('personalize.submit_nickname') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'nickname=' + encodeURIComponent(nickname),
+    }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+      .then(function (result) {
+        if (!result.ok) {
+          error.textContent = result.data.error || 'Could not save nickname.';
+          error.classList.remove('hidden');
+          return;
+        }
+        try { localStorage.setItem('wg_nickname_prompted', '1'); } catch (e) {}
+        chips.forEach(function (chip) { chip.textContent = result.data.display; });
+        closeModal();
+      })
+      .catch(function () {
+        error.textContent = 'Could not save nickname -- try again.';
+        error.classList.remove('hidden');
+      });
+  });
+
+  window.__wgMaybePromptNickname = function () {
+    var hasNickname = {{ 'true' if participant_has_nickname() else 'false' }};
+    var alreadyPrompted = false;
+    try { alreadyPrompted = !!localStorage.getItem('wg_nickname_prompted'); } catch (e) {}
+    if (!hasNickname && !alreadyPrompted) {
+      openModal();
+      return true;
+    }
+    return false;
+  };
+})();
+</script>
+
+<script>
+(function () {
+  try {
+    var disclaimer = document.getElementById('wg-disclaimer');
+    var cookieBanner = document.getElementById('wg-cookie-banner');
+
+    window.__wgMaybeShowCookieBanner = function () {
+      if (!localStorage.getItem('wg_cookie_ack')) {
+        cookieBanner.classList.remove('hidden');
+      }
+    };
+
+    if (!localStorage.getItem('wg_disclaimer_ack')) {
+      disclaimer.classList.remove('hidden');
+      disclaimer.classList.add('flex');
+    } else if (!window.__wgMaybePromptNickname()) {
+      window.__wgMaybeShowCookieBanner();
+    }
+
+    document.getElementById('wg-disclaimer-ack').addEventListener('click', function () {
+      localStorage.setItem('wg_disclaimer_ack', '1');
+      disclaimer.classList.add('hidden');
+      disclaimer.classList.remove('flex');
+      if (!window.__wgMaybePromptNickname()) {
+        window.__wgMaybeShowCookieBanner();
+      }
+    });
+
+    document.getElementById('wg-cookie-ack').addEventListener('click', function () {
+      localStorage.setItem('wg_cookie_ack', '1');
+      cookieBanner.classList.add('hidden');
+    });
+  } catch (e) {
+    // localStorage unavailable: carry on.
+  }
+})();
+</script>
+{% if guided.available %}
+<script>
+(function () {
+  var toggle = document.getElementById('wg-guided-toggle');
+  if (!toggle) return;
+  toggle.addEventListener('click', function () {
+    var turningOn = toggle.getAttribute('aria-checked') !== 'true';
+    document.cookie = 'wg_guided=' + (turningOn ? '1' : '0') + '; path=/; max-age=31536000; SameSite=Lax';
+    window.location.reload();
+  });
+})();
+</script>
+{% endif %}
+{% if g.user %}
+{% include "_assistant_widget.html" %}
+{% endif %}
+</body>
+</html>

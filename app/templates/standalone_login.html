@@ -1,0 +1,18 @@
+{% extends "standalone_base.html" %}
+{% block title %}Instructor sign-in — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+<div class="mx-auto mt-8 w-full max-w-sm rounded-2xl bg-white p-8 shadow-card ring-1 ring-black/5">
+  <h1 class="mb-6 text-xs font-semibold uppercase tracking-widest text-accent-700">Participants console</h1>
+  {% if error %}
+  <div class="mb-4">{% call ui.alert('error') %}{{ error }}{% endcall %}</div>
+  {% endif %}
+  <form method="post" action="{{ url_for('standalone.login') }}" class="space-y-4">
+    <div>
+      <label class="mb-1.5 block text-sm font-medium text-ink-700" for="password">Password</label>
+      <input id="password" name="password" type="password" required autofocus class="{{ ui.input_class() }}">
+    </div>
+    <button class="{{ ui.btn_class('primary', full=True) }}">Sign in</button>
+  </form>
+</div>
+{% endblock %}

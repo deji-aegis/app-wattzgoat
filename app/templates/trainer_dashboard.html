@@ -1,0 +1,168 @@
+{% extends "trainer_base.html" %}
+{% block title %}Instructor dashboard — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+{{ ui.page_header('Instructor dashboard', 'Run the lab: fix vulnerabilities live, offer guided mode, and watch progress.', 'Instructor') }}
+
+<div class="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <div class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-black/5">
+    <div class="text-xs uppercase tracking-wide text-gray-500">Flags hardened</div>
+    <div class="mt-1 text-2xl font-bold tracking-tight"><span id="hardened-count">–</span> / {{ total_flags }}</div>
+  </div>
+  <div class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-black/5">
+    <div class="text-xs uppercase tracking-wide text-gray-500">Total redemptions</div>
+    <div class="mt-1 text-2xl font-bold tracking-tight"><span id="total-redemptions">–</span></div>
+  </div>
+  <div class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-black/5">
+    <div class="text-xs uppercase tracking-wide text-gray-500">Active participants</div>
+    <div class="mt-1 text-2xl font-bold tracking-tight"><span id="participant-count">–</span></div>
+  </div>
+</div>
+
+<h2 class="mb-3 text-lg font-semibold tracking-tight">Guided mode</h2>
+<div class="mb-8 flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-card ring-1 ring-black/5 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+  <p class="text-sm text-gray-500">
+    Offer guided mode to participants. When this is on, a Guided mode switch appears in each participant's
+    header, and anyone who turns it on gets a hint panel for the page they are on. Each participant
+    chooses for themselves, so it never switches on for anyone else. Off by default, and it stays as you
+    set it through every reset.
+  </p>
+  <label class="relative inline-flex shrink-0 items-center cursor-pointer gap-2">
+    <span class="text-xs text-gray-400">Offer to participants</span>
+    <input type="checkbox" class="sr-only peer" id="guided-mode-switch" {% if guided_enabled %}checked{% endif %} onchange="toggleGuided(this)">
+    <div class="w-9 h-5 bg-gray-200 peer-checked:bg-green-600 rounded-full transition-colors"></div>
+    <div class="absolute right-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform peer-checked:-translate-x-4"></div>
+  </label>
+</div>
+
+<h2 class="mb-3 text-lg font-semibold tracking-tight">Hardening toggles</h2>
+<p class="text-sm text-gray-500 mb-4">
+  Flip any flag to its hardened branch live, or flip an entire category at once with the switch
+  next to its name -- takes effect on the next request, no restart needed.
+</p>
+<div class="space-y-6 mb-10">
+{% for category, items in grouped_catalog.items() %}
+  <div class="rounded-2xl bg-white p-5 shadow-card ring-1 ring-black/5">
+    <div class="mb-3 flex items-center justify-between">
+      <h3 class="text-sm font-semibold text-ink-700">{{ category }}</h3>
+      <label class="relative inline-flex items-center cursor-pointer gap-2">
+        <span class="text-xs text-gray-400">Harden all</span>
+        <input type="checkbox" class="sr-only peer" data-category-key="{{ category }}" onchange="toggleCategory(this)">
+        <div class="w-9 h-5 bg-gray-200 peer-checked:bg-amber-600 rounded-full transition-colors"></div>
+        <div class="absolute right-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform peer-checked:-translate-x-4"></div>
+      </label>
+    </div>
+    <div class="divide-y divide-gray-100">
+    {% for item in items %}
+      <div class="flex items-center justify-between py-2.5 text-sm">
+        <div class="flex items-center gap-2">
+          <span>{{ item.name }}</span>
+          <span class="font-mono text-xs text-gray-400">{{ item.key }}</span>
+          <span class="text-xs text-amber-700 bg-amber-50 rounded-full px-2 py-0.5 hidden" data-redeem-badge="{{ item.key }}"></span>
+        </div>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" class="sr-only peer" data-flag-key="{{ item.key }}" onchange="toggleFlag(this)">
+          <div class="w-9 h-5 bg-gray-200 peer-checked:bg-green-600 rounded-full transition-colors"></div>
+          <div class="absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform peer-checked:translate-x-4"></div>
+        </label>
+      </div>
+    {% endfor %}
+    </div>
+  </div>
+{% endfor %}
+</div>
+
+<script>
+(function () {
+  const POLL_MS = 3000;
+  let inFlight = false;
+
+  function fmtTime(iso) {
+    if (!iso) return '\u2014';
+    return iso.replace('T', ' ').slice(0, 19);
+  }
+
+  async function refresh() {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      const res = await fetch("{{ url_for('trainer.api_summary') }}", { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return;
+      const data = await res.json();
+
+      let hardenedCount = 0;
+      document.querySelectorAll('input[data-flag-key]').forEach(function (input) {
+        const key = input.dataset.flagKey;
+        const isHardened = !!data.hardening[key];
+        if (isHardened) hardenedCount += 1;
+        if (document.activeElement !== input) {
+          input.checked = isHardened;
+        }
+      });
+      const guidedSwitch = document.getElementById('guided-mode-switch');
+      if (guidedSwitch && document.activeElement !== guidedSwitch) {
+        guidedSwitch.checked = !!data.guided_mode_enabled;
+      }
+      document.getElementById('hardened-count').textContent = hardenedCount;
+      document.getElementById('total-redemptions').textContent = data.total_redemptions;
+      document.getElementById('participant-count').textContent = data.participants.length;
+
+      document.querySelectorAll('input[data-category-key]').forEach(function (input) {
+        const key = input.dataset.categoryKey;
+        const isHardened = !!(data.category_hardening && data.category_hardening[key]);
+        if (document.activeElement !== input) {
+          input.checked = isHardened;
+        }
+      });
+
+      // Per-flag redemption badges.
+      document.querySelectorAll('[data-redeem-badge]').forEach(function (badge) {
+        const key = badge.dataset.redeemBadge;
+        const count = data.redemption_counts[key];
+        if (count) {
+          badge.textContent = count + (count === 1 ? ' redemption' : ' redemptions');
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      });
+    } catch (e) {
+      // Transient network error: try again next poll.
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  window.toggleFlag = function (input) {
+    const key = input.dataset.flagKey;
+    const hardened = input.checked;
+    fetch("{{ url_for('trainer.api_toggle_flag') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'flag_key=' + encodeURIComponent(key) + '&hardened=' + (hardened ? '1' : '0'),
+    }).then(function () { refresh(); });
+  };
+
+  window.toggleGuided = function (input) {
+    fetch("{{ url_for('trainer.api_guided_mode') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'enabled=' + (input.checked ? '1' : '0'),
+    }).then(function () { refresh(); });
+  };
+
+  window.toggleCategory = function (input) {
+    const key = input.dataset.categoryKey;
+    const hardened = input.checked;
+    fetch("{{ url_for('trainer.api_toggle_category') }}", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'category=' + encodeURIComponent(key) + '&hardened=' + (hardened ? '1' : '0'),
+    }).then(function () { refresh(); });
+  };
+
+  refresh();
+  setInterval(refresh, POLL_MS);
+})();
+</script>
+{% endblock %}

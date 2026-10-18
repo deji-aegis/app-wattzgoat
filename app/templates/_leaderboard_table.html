@@ -1,0 +1,135 @@
+{# Participant leaderboard table, shared by the instructor dashboard and the /participants console. #}
+{% if lb_export_summary %}
+<div class="mb-3 flex flex-wrap items-center justify-end gap-2 text-sm">
+  <span class="text-gray-500">Export CSV</span>
+  <a href="{{ lb_export_summary }}" class="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-ink ring-1 ring-gray-200 transition hover:bg-gray-50">Summary</a>
+  <a href="{{ lb_export_detail }}" class="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-ink ring-1 ring-gray-200 transition hover:bg-gray-50">Per-flag detail</a>
+</div>
+{% endif %}
+<div class="overflow-x-auto rounded-2xl bg-white shadow-card ring-1 ring-black/5">
+<table class="w-full text-sm">
+<thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+<tr>
+  <th class="px-4 py-2 w-12">#</th>
+  <th class="px-4 py-2">Participant</th>
+  <th class="px-4 py-2">Participant ID</th>
+  <th class="px-4 py-2">Flags redeemed</th>
+  <th class="px-4 py-2">Last activity</th>
+  {% if lb_checklist_api %}<th class="px-4 py-2">View redeemed flags</th>{% endif %}
+  <th class="px-4 py-2">Redemptions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-gray-100" id="leaderboard-rows">
+<tr><td colspan="{{ 7 if lb_checklist_api else 6 }}" class="px-4 py-6 text-center text-gray-500">Loading…</td></tr>
+</tbody>
+</table>
+</div>
+
+{% if lb_checklist_api %}
+<div id="checklist-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center p-4" style="z-index: 50;">
+  <div class="max-h-[80vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white shadow-lift">
+    <div class="flex items-center justify-between px-4 py-3 border-b">
+      <h2 class="font-semibold text-sm" id="checklist-modal-title">Redeemed flags</h2>
+      <button type="button" onclick="document.getElementById('checklist-modal').classList.add('hidden'); document.getElementById('checklist-modal').classList.remove('flex');" class="text-gray-400 hover:text-gray-600 text-sm">Close</button>
+    </div>
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 text-left text-xs uppercase tracking-wide text-gray-500">
+        <tr><th class="px-4 py-2">Category</th><th class="px-4 py-2">Name</th><th class="px-4 py-2 text-right">Status</th></tr>
+      </thead>
+      <tbody class="divide-y divide-gray-100" id="checklist-modal-rows"></tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<script>
+(function () {
+  const POLL_MS = 3000;
+  let inFlight = false;
+
+  function fmtTime(iso) {
+    if (!iso) return '\u2014';
+    return iso.replace('T', ' ').slice(0, 19);
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  {% if lb_checklist_api %}
+  window.showChecklistModal = async function (participantId, display) {
+    const modal = document.getElementById('checklist-modal');
+    const rows = document.getElementById('checklist-modal-rows');
+    document.getElementById('checklist-modal-title').textContent = 'Redeemed flags \u2014 ' + display;
+    rows.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">Loading\u2026</td></tr>';
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    try {
+      const res = await fetch("{{ lb_checklist_api }}?participant_id=" + encodeURIComponent(participantId), { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) {
+        rows.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">Could not load.</td></tr>';
+        return;
+      }
+      const data = await res.json();
+      rows.innerHTML = data.checklist.map(function (item) {
+        const badge = item.done
+          ? '<span class="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">solved</span>'
+          : '<span class="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">locked</span>';
+        return '<tr>' +
+          '<td class="px-4 py-2">' + esc(item.category) + '</td>' +
+          '<td class="px-4 py-2 text-gray-500">' + esc(item.name) + '</td>' +
+          '<td class="px-4 py-2 text-right">' + badge + '</td>' +
+          '</tr>';
+      }).join('');
+    } catch (e) {
+      rows.innerHTML = '<tr><td colspan="3" class="px-4 py-6 text-center text-gray-500">Could not load.</td></tr>';
+    }
+  };
+  {% endif %}
+
+  async function refresh() {
+    if (inFlight) return;
+    inFlight = true;
+    try {
+      const res = await fetch("{{ lb_api }}", { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) return;
+      const data = await res.json();
+      const rows = document.getElementById('leaderboard-rows');
+      if (data.standings.length === 0) {
+        rows.innerHTML = '<tr><td colspan="{{ 7 if lb_checklist_api else 6 }}" class="px-4 py-6 text-center text-gray-500">No redemptions yet.</td></tr>';
+        return;
+      }
+      rows.innerHTML = data.standings.map(function (p, i) {
+        return '<tr class="transition hover:bg-gray-50">' +
+          '<td class="px-4 py-2 text-gray-400">' + (i + 1) + '</td>' +
+          '<td class="px-4 py-2">' + esc(p.display) + '</td>' +
+          '<td class="px-4 py-2 font-mono text-xs">' + esc(p.participant_id) + '</td>' +
+          '<td class="px-4 py-2">' + p.flags_redeemed + ' / {{ lb_total }}</td>' +
+          '<td class="px-4 py-2 text-xs text-gray-500">' + fmtTime(p.last_activity) + '</td>' +
+          {% if lb_checklist_api %}
+          '<td class="px-4 py-2">' +
+            '<button type="button" onclick="showChecklistModal(\'' + esc(p.participant_id) + '\', \'' + esc(p.display).replace(/'/g, "\\'") + '\')" class="text-xs font-semibold text-ink underline decoration-gray-300 transition hover:decoration-ink">View</button>' +
+          '</td>' +
+          {% endif %}
+          '<td class="px-4 py-2">' +
+            '<form method="post" data-confirm="Clear all redemptions for this participant? Their nickname is left as it is." action="{{ lb_reset }}">' +
+              '<input type="hidden" name="participant_id" value="' + esc(p.participant_id) + '">' +
+              '<input type="hidden" name="next" value="leaderboard">' +
+              '<button type="submit" class="text-xs font-semibold text-red-600 underline decoration-red-200 transition hover:text-red-800 hover:decoration-red-400">Reset</button>' +
+            '</form>' +
+          '</td>' +
+          '</tr>';
+      }).join('');
+    } catch (e) {
+      // Transient network error mid-poll -- try again next tick.
+    } finally {
+      inFlight = false;
+    }
+  }
+
+  refresh();
+  setInterval(refresh, POLL_MS);
+})();
+</script>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}WattzGOAT Instructor{% endblock %}</title>
+<link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+<script src="{{ url_for('static', filename='vendor/chart.umd.min.js') }}"></script>
+{% block head_extra %}{% endblock %}
+</head>
+{# Nav link that highlights the current page. #}
+{% macro nav_link(endpoint, label) -%}
+<a href="{{ url_for(endpoint) }}" class="rounded-md px-3 py-1.5 transition {% if request.endpoint == endpoint %}bg-white/10 text-white{% else %}hover:bg-white/10 hover:text-white{% endif %}">{{ label }}</a>
+{%- endmacro %}
+<body class="bg-canvas text-ink min-h-screen font-sans antialiased">
+<header class="sticky top-0 z-30 flex flex-wrap items-center gap-x-4 gap-y-2 bg-ink/95 px-6 py-3 text-white shadow-lift backdrop-blur">
+  <a href="{{ url_for('trainer.dashboard') }}" class="flex items-center gap-3 hover:opacity-90">
+    <svg width="28" height="28" viewBox="0 0 100 100" aria-hidden="true">
+      <path d="M60 4 L20 56 L42 56 L34 96 L80 40 L52 40 Z" fill="#F4B41A"/>
+    </svg>
+    <span class="font-semibold text-lg">Wattz<span class="text-[#F4B41A] font-bold">GOAT</span></span>
+  </a>
+  <span class="rounded-full bg-accent px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wide text-ink">Instructor</span>
+
+  <nav class="ml-4 flex flex-wrap items-center gap-x-1 gap-y-1 text-sm text-gray-300">
+    {{ nav_link('trainer.dashboard', 'Dashboard') }}
+    {{ nav_link('trainer.leaderboard', 'Participant Leaderboard') }}
+    {{ nav_link('trainer.code_examples', 'Code Examples') }}
+    {% if participant_base_url %}
+    <a href="{{ participant_base_url }}/" class="rounded-md px-3 py-1.5 transition hover:bg-white/10 hover:text-white" target="_blank" rel="noopener">WattzGOAT Portal ↗</a>
+    {% endif %}
+    <span class="mx-2 hidden h-5 w-px bg-white/15 sm:inline-block" aria-hidden="true"></span>
+    <form method="post" action="{{ url_for('trainer.reset_lab') }}"
+          data-confirm="Reset the entire lab to its seeded state? This clears redemptions, sessions, nicknames, uploaded files, and every hardening toggle.">
+      <button type="submit" class="rounded-md px-3 py-1.5 text-red-300 transition hover:bg-red-500/10 hover:text-red-200">Reset Lab</button>
+    </form>
+    <form method="post" action="{{ url_for('trainer.reset_app') }}"
+          data-confirm="Reset the app to its seeded state? Accounts, meters, tickets and other app data are restored, every hardening toggle returns to vulnerable, all logins expire, and uploaded files are removed. Redemptions, participant IDs and nicknames are kept.">
+      <button type="submit" class="rounded-md px-3 py-1.5 text-red-300 transition hover:bg-red-500/10 hover:text-red-200">Reset App</button>
+    </form>
+    <form method="post" action="{{ url_for('trainer.reset_all_redemptions') }}"
+          data-confirm="Clear redemption progress for EVERY participant? Hardening state, nicknames, and accounts are left as they are.">
+      <button type="submit" class="rounded-md px-3 py-1.5 text-red-300 transition hover:bg-red-500/10 hover:text-red-200">Reset All Redemptions</button>
+    </form>
+  </nav>
+
+  <span class="ml-auto text-sm text-gray-400">{{ trainer_name }}</span>
+  <form method="post" action="{{ url_for('trainer.logout') }}">
+    <button class="rounded-md px-2 py-1 text-sm text-gray-300 transition hover:bg-white/10 hover:text-white">Log out</button>
+  </form>
+</header>
+<main class="mx-auto max-w-5xl px-6 py-10">
+{% block content %}{% endblock %}
+</main>
+<footer class="mx-auto mt-8 max-w-5xl border-t border-gray-200 px-6 py-6 text-xs text-gray-500">
+  <p>WattzGOAT Instructor Dashboard -- tooling for running the lab. Not part of the participant-facing app.</p>
+</footer>
+
+{% include "_instructor_ui.html" %}
+</body>
+</html>

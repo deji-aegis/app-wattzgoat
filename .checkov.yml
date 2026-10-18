@@ -1,0 +1,11 @@
+soft-fail: true
+framework:
+  - terraform
+  - kubernetes
+  - helm
+  - dockerfile
+  - github_actions
+skip-check:
+  - CKV_K8S_37    # seccomp profile — enforced by Kyverno instead
+  - CKV_K8S_23    # default namespace — we use explicit namespaces
+download-external-modules: true

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Admin — WattzGOAT{% endblock %}
+{% block content %}
+{% import "_ui.html" as ui %}
+{{ ui.page_header('Operator console', 'The fleet at a glance.', 'Admin') }}
+{% if weakpw_flag %}
+<div class="mb-6">{% call ui.flag_note() %}
+  Weak passwords: {{ weakpw_flag }}
+{% endcall %}</div>
+{% endif %}
+{% if devadmin_flag %}
+<div class="mb-6">{% call ui.flag_note() %}
+  Sensitive information disclosure: {{ devadmin_flag }}
+{% endcall %}</div>
+{% endif %}
+<div class="mb-8 grid grid-cols-2 gap-4 md:grid-cols-4">
+  {{ ui.stat(stats.meter_count, 'meters') }}
+  {{ ui.stat(stats.connected_count, 'connected') }}
+  {{ ui.stat(stats.customer_count, 'customers') }}
+  {{ ui.stat(stats.open_tickets, 'open tickets') }}
+</div>
+<div class="flex flex-wrap gap-3">
+  <a href="{{ url_for('admin.meters') }}" class="{{ ui.btn_class('accent') }}">{{ ui.icon('gauge', 16) }} View meter fleet</a>
+  <a href="{{ url_for('admin.alarms') }}" class="{{ ui.btn_class('secondary') }}">{{ ui.icon('alert', 16) }} View alarms</a>
+  <a href="{{ url_for('admin.tickets') }}" class="{{ ui.btn_class('secondary') }}">{{ ui.icon('support', 16) }} Support tickets</a>
+</div>
+{% endblock %}
