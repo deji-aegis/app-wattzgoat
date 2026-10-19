@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "wattzgoat.fullname" . }}
+  name: wattzgoat
 spec:
   replicas: {{ .Values.replicaCount }}
   template:
