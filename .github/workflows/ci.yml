@@ -26,10 +26,10 @@ jobs:
       gitops_repo: deji-aegis/platform-gitops
       gitops_app_name: wattzgoat
       environment: dev
-      registry: 042186225507.dkr.ecr.eu-west-2.amazonaws.com
+      registry: 146814469006.dkr.ecr.eu-west-2.amazonaws.com
       helm_chart_path: deploy/helm
       helm_namespace: wattzgoat-dev
-      languages: '["python"]' # Changed from javascript-typescript to python!
+      languages: '["python"]' 
       fail_on_finding: false
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
