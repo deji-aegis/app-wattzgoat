@@ -1,9 +1,17 @@
-# .github/dependabot.yml
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    # Group all action updates into a single PR
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    # Only update actions (ignores other dependencies if present)
+    allow:
+      - dependency-type: "direct"
+    # Wait 7 days before updating to a newly released version
     cooldown:
       default-days: 7
