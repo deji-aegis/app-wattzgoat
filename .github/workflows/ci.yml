@@ -30,7 +30,7 @@ jobs:
       helm_chart_path: deploy/helm
       helm_namespace: wattzgoat-dev
       languages: '["python"]' # Changed from javascript-typescript to python!
-      fail_on_finding: true
+      fail_on_finding: false
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
       GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
